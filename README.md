@@ -33,11 +33,12 @@ Tento READ ME slúži ako návod na spustenie tejto aplikácie.
      "DefaultConnection": "Server=YOUR_SERVER;Database=YOUR_DATABASE;Trusted_Connection=True;MultipleActiveResultSets=true"
    }
    ```
-
-3. Spustite migráciu databázy na vytvorenie potrebných tabuliek otvorením terminálu cez View vo Visual Studiu a následne vložením tohoto príkazu:
-   ```bash
-   dotnet ef database update
-   ```
+3. Spustite migráciu databázy na vytvorenie potrebných tabuliek nasledovne:
+   - Otvorte NuGet Package Manager Console cez Tools > NuGet Package Manager > Package Manager Console vo Visual Studiu.
+   - Potom spustite tento príkaz na aplikovanie migrácií:
+       ```bash
+         Update-Database
+       ```
    
 ## Dodatočné informácie: 
 
