@@ -1,0 +1,217 @@
+﻿@page "/employees"
+@inject HttpClient Http
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Employees</PageTitle>
+
+<h1>Employees</h1>
+<br />
+<p><em>@statusMessage</em></p>
+<br />
+@if (employees.Count != 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Surname</th>
+                <th>Edit</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (EmployeeDTO employee in employees)
+            {
+                <tr>
+                    <td><span class="clickable" @onclick="() => ShowEmployeeDetails(employee)">@employee.Name</span></td>
+                    <td><span class="clickable" @onclick="() => ShowEmployeeDetails(employee)">@employee.Surname</span></td>
+                    <th><button class="btn btn-primary" @onclick="@(() => EditEmployee(employee.EmployeeID))">Edit</button></th>
+                    <th><button class="btn btn-danger" @onclick="@(() => DeleteEmployee(employee.EmployeeID))">Delete</button></th>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <p><strong>Name:</strong> @selectedEmployee?.Name</p>
+                    <br />
+                    <p><strong>Surname:</strong> @selectedEmployee?.Surname</p>
+                    <br />
+                    <p><strong>Birth Date:</strong> @selectedEmployee?.BirthDate.ToShortDateString()</p>
+                    <br />
+                    <p><strong>IP Address:</strong> @selectedEmployee?.IPAddress</p>
+                    <br />
+                    <p><strong>IP Country Code:</strong> @selectedEmployee?.IPCountryCode</p>
+                    <br />
+                    <p><strong>Position:</strong> @selectedEmployee?.PositionName</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+<br />
+<button class="btn btn-primary" @onclick="@(() => AddEmployee())">Add</button>
+<br />
+<br />
+<div>
+    <h3>Upload Data from JSON</h3>
+    <br />
+    <div>
+        <label>Upload Positions File: </label>
+        <InputFile OnChange="HandlePositionsFileSelected" accept="application/json" />
+    </div>
+    <br />
+    <div>
+        <label>Upload Employees File: </label>
+        <InputFile OnChange="HandleEmployeesFileSelected" accept="application/json" />
+    </div>
+    <br />
+    <button class="btn btn-primary" @onclick="UploadFiles">Upload Files</button>
+    <br />
+    <p class="text-danger">@uploadMessage</p>
+</div>
+
+@code {
+    List<EmployeeDTO> employees = new List<EmployeeDTO>();
+    EmployeeDTO selectedEmployee = new EmployeeDTO();
+    private IBrowserFile? uploadedPositionsFile;
+    private IBrowserFile? uploadedEmployeesFile;
+    public string uploadMessage = string.Empty;
+    public string statusMessage = "Loading...";
+
+    private async Task HandleError(Exception ex)
+    {
+        await Http.PostAsJsonAsync("api/logging/logexception", new { message = ex.Message, stackTrace = ex.StackTrace });
+    }
+
+    bool CheckResponse(HttpResponseMessage responseMessage)
+    {
+        if (responseMessage.IsSuccessStatusCode)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+    }
+
+    void AddEmployee()
+    {
+        NavigationManager.NavigateTo("addemployee");
+    }
+
+    void EditEmployee(int id)
+    {
+        NavigationManager.NavigateTo($"editemployee/{id}");
+    }
+
+    async Task DeleteEmployee(int id)
+    {
+        try
+        {
+            HttpResponseMessage response = await Http.DeleteAsync($"api/employees/{id}");
+            if (CheckResponse(response))
+            {
+                await LoadEmployees();
+            }
+            else
+            {
+                statusMessage = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+        }
+    }
+
+    async Task LoadEmployees()
+    {
+        try
+        {
+            HttpResponseMessage response = await Http.GetAsync("api/employees");
+            if (CheckResponse(response))
+            {
+                employees = await response.Content.ReadFromJsonAsync<List<EmployeeDTO>>();
+                statusMessage = "";
+            }
+            else
+            {
+                statusMessage = await response.Content.ReadAsStringAsync();
+                employees = new List<EmployeeDTO>();
+            }
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+        }
+    }
+
+    async Task ShowEmployeeDetails(EmployeeDTO employee)
+    {
+        selectedEmployee = employee;
+        await JS.InvokeVoidAsync("showEmployeeModal");
+    }
+
+    async Task HandlePositionsFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadedPositionsFile = e.File;
+    }
+
+    async Task HandleEmployeesFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadedEmployeesFile = e.File;
+    }
+
+    async Task UploadFiles()
+    {
+        if (uploadedPositionsFile == null && uploadedEmployeesFile == null)
+        {
+            uploadMessage = "Please select at least one file to upload.";
+            return;
+        }
+        if (uploadedPositionsFile != null)
+        {
+            await UploadFile(uploadedPositionsFile, "api/positions/upload");
+        }
+        if (uploadedEmployeesFile != null)
+        {
+            await UploadFile(uploadedEmployeesFile, "api/employees/upload");
+        }
+        await LoadEmployees();
+    }
+
+    async Task UploadFile(IBrowserFile file, string apiUrl)
+    {
+        try
+        {
+            using Stream stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            string jsonContent = await new StreamReader(stream).ReadToEndAsync();
+            jsonContent = FixDateFormats(jsonContent);
+            StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await Http.PostAsync(apiUrl, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                uploadMessage = $"Failed to upload file.";
+            }
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+        }
+    }
+    string FixDateFormats(string json)
+    {
+        string pattern = @"(\d{4})/(\d{2})/(\d{2})";
+        string replacement = "$1-$2-$3T00:00:00";
+        return Regex.Replace(json, pattern, replacement);
+    }
+}

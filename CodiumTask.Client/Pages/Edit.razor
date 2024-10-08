@@ -1,0 +1,144 @@
+﻿@page "/editemployee/{id:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<PageTitle>Edit Employee</PageTitle>
+
+<h1>Edit Employee</h1>
+<br />
+<p><em>@statusMessage</em></p>
+<br />
+@if ((positions.Count != 0) && (employee != null))
+{
+    <EditForm Model="employee" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <div>
+            <label for="name">Name</label>
+            <InputText id="name" @bind-Value="employee.Name"></InputText>
+        </div>
+        <br />
+        <div>
+            <label for="surname">Surname</label>
+            <InputText id="surname" @bind-Value="employee.Surname"></InputText>
+        </div>
+        <br />
+        <div>
+            <label for="birthDate">Birth Date</label>
+            <InputDate id="birthDate" @bind-Value="employee.BirthDate"></InputDate>
+        </div>
+        <br />
+        <div>
+            <label for="IPaddress">IP Address</label>
+            <InputText id="IPaddress" @bind-Value="employee.IPAddress"></InputText>
+        </div>
+        <br />
+        <div>
+            <label for="position">Position</label>
+            <InputSelect id="position" @bind-Value="employee.PositionID">
+                <option value="">Select a position</option>
+                @foreach (var position in positions)
+                {
+                    <option value="@position.PositionID">@position.PositionName</option>
+                }
+            </InputSelect>
+        </div>
+        <br />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="text-danger">@errorMessage</div>
+        }
+        <ValidationSummary />
+        <br />
+        <button type="submit" class="btn btn-primary">Edit</button>
+    </EditForm>
+}
+<br />
+<button class="btn btn-primary" @onclick="@(() => {NavigationManager.NavigateTo("/employees");})">Go Back</button>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    public EmployeeAddEditDTO? employee { get; set; } = new EmployeeAddEditDTO();
+    public List<Position> positions { get; set; } = new List<Position>();
+    private ErrorBoundary? errorBoundary;
+    private string errorMessage = string.Empty;
+    private string statusMessage = "Loading...";
+
+    private async Task HandleError(Exception ex)
+    {
+        await Http.PostAsJsonAsync("api/logging/logexception", new { message = ex.Message, stackTrace = ex.StackTrace });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployeeAndPositions();
+    }
+
+    bool CheckResponse(HttpResponseMessage responseMessage)
+    {
+        if (responseMessage.IsSuccessStatusCode)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    async Task LoadEmployeeAndPositions()
+    {
+        try
+        {
+            HttpResponseMessage responsePositions = await Http.GetAsync($"api/positions");
+            if (CheckResponse(responsePositions))
+            {
+                positions = await responsePositions.Content.ReadFromJsonAsync<List<Position>>();
+            }
+            else
+            {
+                statusMessage = "There are no positions to choose from.";
+                return;
+            }
+            HttpResponseMessage responseEmployee = await Http.GetAsync($"api/employees/{(int)Id}");
+            if (CheckResponse(responseEmployee))
+            {
+                employee = await responseEmployee.Content.ReadFromJsonAsync<EmployeeAddEditDTO>();
+            }
+            else
+            {
+                statusMessage = "There are no positions to choose from.";
+                return;
+            }
+            statusMessage = "";
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        try
+        {
+            bool validIP = await Http.GetFromJsonAsync<bool>($"api/employees/checkIP?ipAddress={employee.IPAddress}");
+            if (!validIP)
+            {
+                errorMessage = "This IP Address is either local or private.";
+                return;
+            }
+            HttpResponseMessage result = await Http.PutAsJsonAsync($"api/employees/{Id}", employee);
+            if (!result.IsSuccessStatusCode)
+            {
+                errorMessage = "Failed to update employee.";
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/employees");
+            }
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+        }
+    }
+}
