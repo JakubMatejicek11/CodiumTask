@@ -30,7 +30,7 @@ Tento READ ME slúži ako návod na spustenie tejto aplikácie.
    Príklad:
    ```json
    "ConnectionStrings": {
-     "DefaultConnection": "Server=YOUR_SERVER;Database=YOUR_DATABASE;Trusted_Connection=True;MultipleActiveResultSets=true"
+     "DefaultConnection": "Server=YOUR_SERVER;Database=YOUR_DATABASE;MultipleActiveResultSets=true"
    }
    ```
 3. Spustite migráciu databázy na vytvorenie potrebných tabuliek nasledovne:
