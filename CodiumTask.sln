@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodiumTask", "CodiumTask\CodiumTask.csproj", "{C7E59489-1DF6-4465-8006-822B997BF581}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodiumTask", "CodiumTask\CodiumTask.csproj", "{C7E59489-1DF6-4465-8006-822B997BF581}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodiumTask.Client", "CodiumTask.Client\CodiumTask.Client.csproj", "{63D283F9-AAAD-49B8-8293-FE08919FF618}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodiumTask.Client", "CodiumTask.Client\CodiumTask.Client.csproj", "{63D283F9-AAAD-49B8-8293-FE08919FF618}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{4FBDFA5B-CB56-4B13-BC5C-BE7C7D228E24}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shared", "Shared\Shared.csproj", "{4FBDFA5B-CB56-4B13-BC5C-BE7C7D228E24}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Repository\Repository.csproj", "{C1FC6A13-016C-4E97-9237-94D79C9B4085}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataAccess", "Repository\DataAccess.csproj", "{C1FC6A13-016C-4E97-9237-94D79C9B4085}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

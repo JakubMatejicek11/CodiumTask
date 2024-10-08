@@ -72,7 +72,10 @@
     <br />
     <button class="btn btn-primary" @onclick="UploadFiles">Upload Files</button>
     <br />
-    <p class="text-danger">@uploadMessage</p>
+    <br />
+    <p class="text-danger">@uploadMessageEmployees</p>
+    <p class="text-danger">@uploadMessagePositions</p>
+     <br />
 </div>
 
 @code {
@@ -80,7 +83,8 @@
     EmployeeDTO selectedEmployee = new EmployeeDTO();
     private IBrowserFile? uploadedPositionsFile;
     private IBrowserFile? uploadedEmployeesFile;
-    public string uploadMessage = string.Empty;
+    public string uploadMessageEmployees = string.Empty;
+    public string uploadMessagePositions = string.Empty;
     public string statusMessage = "Loading...";
 
     private async Task HandleError(Exception ex)
@@ -172,35 +176,58 @@
 
     async Task UploadFiles()
     {
-        if (uploadedPositionsFile == null && uploadedEmployeesFile == null)
-        {
-            uploadMessage = "Please select at least one file to upload.";
-            return;
-        }
-        if (uploadedPositionsFile != null)
-        {
-            await UploadFile(uploadedPositionsFile, "api/positions/upload");
-        }
-        if (uploadedEmployeesFile != null)
-        {
-            await UploadFile(uploadedEmployeesFile, "api/employees/upload");
-        }
-        await LoadEmployees();
-    }
-
-    async Task UploadFile(IBrowserFile file, string apiUrl)
-    {
         try
         {
-            using Stream stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            string jsonContent = await new StreamReader(stream).ReadToEndAsync();
-            jsonContent = FixDateFormats(jsonContent);
-            StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await Http.PostAsync(apiUrl, content);
-
-            if (!response.IsSuccessStatusCode)
+            if (uploadedPositionsFile == null && uploadedEmployeesFile == null)
             {
-                uploadMessage = $"Failed to upload file.";
+                statusMessage = "Please select at least one file to upload.";
+                return;
+            }
+            if (uploadedPositionsFile != null)
+            {
+                StringContent? temporaryContent = await GetStringContent(uploadedPositionsFile);
+
+                if (temporaryContent == null)
+                {
+                    uploadMessagePositions = $"Failed to upload file: {uploadedPositionsFile.Name}";
+                }
+                else
+                {
+                    HttpResponseMessage response = await Http.PostAsync("api/positions/upload", temporaryContent);
+
+                    if (CheckResponse(response))
+                    {
+                        uploadMessagePositions = "";
+                        await LoadEmployees();
+                    }
+                    else
+                    {
+                        uploadMessagePositions = $"Failed to upload file: {uploadedPositionsFile.Name}";
+                    }
+                }
+            }
+            if (uploadedEmployeesFile != null)
+            {
+                StringContent? temporaryContent = await GetStringContent(uploadedEmployeesFile);
+
+                if (temporaryContent == null)
+                {
+                    uploadMessageEmployees = $"Failed to upload file: {uploadedEmployeesFile.Name}";
+                }
+                else
+                {
+                    HttpResponseMessage response = await Http.PostAsync("api/employees/upload", temporaryContent);
+
+                    if (CheckResponse(response))
+                    {
+                        uploadMessageEmployees = "";
+                        await LoadEmployees();
+                    }
+                    else
+                    {
+                        uploadMessageEmployees = $"Failed to upload file: {uploadedEmployeesFile.Name}";
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -208,6 +235,24 @@
             await HandleError(ex);
         }
     }
+
+    async Task<StringContent?> GetStringContent(IBrowserFile file)
+    {
+        try
+        {
+            using Stream stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            string jsonContent = await new StreamReader(stream).ReadToEndAsync();
+            jsonContent = FixDateFormats(jsonContent);
+            StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            return content;
+        }
+        catch (Exception ex)
+        {
+            await HandleError(ex);
+            return null;
+        }
+    }
+
     string FixDateFormats(string json)
     {
         string pattern = @"(\d{4})/(\d{2})/(\d{2})";

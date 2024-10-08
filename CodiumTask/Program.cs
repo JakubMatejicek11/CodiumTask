@@ -4,6 +4,7 @@ using CodiumTask.Components;
 using Repository.Data;
 using Serilog;
 using Repository.Services;
+using Microsoft.Extensions.Configuration;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
@@ -23,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 
 builder.Services.AddDbContext<DataContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<PositionService>();
@@ -40,7 +41,8 @@ app.Use(async (context, next) =>
     catch (Exception ex)
     {
         Log.Error(ex, "[Server] An unhandled exception occurred.");
-        throw;
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsync("A server error occurred.");
     }
 });
 
